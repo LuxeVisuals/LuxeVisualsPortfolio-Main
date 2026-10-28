@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LuxeVisuals</title>
+
+  <!-- Google Fonts: Cinzel & Permanent Marker -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;800;900&family=Permanent+Marker&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome Icons for Discord, X (Twitter), etc. -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Fullscreen Website Loading Video (Initial entrance + smooth page transitions) -->
+  <div id="pageLoader" class="page-loader">
+    <video id="loaderVideo" class="loader-video" playsinline muted autoplay>
+      <source src="assets/WebsiteLoading.mp4" type="video/mp4">
+    </video>
+  </div>
+
+  <!-- Animated Ambient Background with floating radiant nodes -->
+  <div class="animated-bg">
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+    <div class="bg-orb orb-3"></div>
+  </div>
+
+  <!-- Outer App Viewport -->
+  <div class="site-wrapper">
+    <!-- Geometric framing accents -->
+    <div class="bg-diagonal-left"></div>
+    <div class="bg-diagonal-right"></div>
+
+    <!-- Main Framed Card -->
+    <div class="portfolio-card">
+
+      <!-- Navigation Bar -->
+      <header class="navbar">
+        <!-- Logo Image with Transparent Background -->
+        <a href="#home" class="brand-logo-link" data-nav="home" aria-label="LuxeVisuals Home">
+          <img src="assets/logo.png" alt="LuxeVisuals Logo" class="brand-logo-img">
+        </a>
+
+        <!-- Top Navigation Links -->
+        <nav class="nav-links">
+          <a href="#home" class="nav-item active" data-nav="home">Home</a>
+          <a href="#services" class="nav-item" data-nav="services">Services</a>
+          <a href="#tos" class="nav-item" data-nav="tos">ToS</a>
+          <a href="#portfolio" class="nav-item" data-nav="portfolio">Portfolio</a>
+          <a href="#contact" class="nav-item" data-nav="contact">Contact me</a>
+        </nav>
+
+        <button class="btn btn-primary nav-cta" data-nav="contact">Hire Me</button>
+      </header>
+
+      <!-- Dynamic Views Container -->
+      <div class="views-container">
+
+        <!-- ========================================== -->
+        <!-- 1. HOME VIEW                               -->
+        <!-- ========================================== -->
+        <section id="view-home" class="view-section active">
+          <div class="hero-grid">
+            
+            <!-- Left Hero Content -->
+            <div class="hero-content">
+              <div class="greeting-box">
+                <span class="greeting-subtitle">Hi I am</span>
+                <h2 class="creator-name">Luxe Visuals</h2>
+              </div>
+
+              <h1 class="main-headline">
+                <span class="brush-text">UI/UX designer</span>
+              </h1>
+
+              <!-- Social Links: Discord & X -->
+              <div class="social-links">
+                <a id="homeDiscordLink" href="https://discord.com/users/1057018141433139281" target="_blank" rel="noopener noreferrer" class="social-circle" aria-label="Discord">
+                  <i class="fa-brands fa-discord"></i>
+                </a>
+                <a id="homeXLink" href="https://x.com/LuxeVisualsDev" target="_blank" rel="noopener noreferrer" class="social-circle" aria-label="X (Twitter)">
+                  <i class="fa-brands fa-x-twitter"></i>
+                </a>
+              </div>
+
+              <!-- Action CTA -->
+              <div class="cta-actions">
+                <button class="btn btn-primary btn-lg" data-nav="contact">Hire Me</button>
+              </div>
+
+              <!-- Easily Configurable Stats Badge -->
+              <div class="stats-badge-card">
+                <div class="stat-item">
+                  <span class="stat-number" id="statExp">10+</span>
+                  <span class="stat-label" id="statExpLabel">Months</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                  <span class="stat-number" id="statProjects">5+</span>
+                  <span class="stat-label" id="statProjectsLabel">Projects</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                  <span class="stat-number" id="statClients">10+</span>
+                  <span class="stat-label" id="statClientsLabel">Happy Clients</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Hero Visual: LogoVideo.mp4 -->
+            <div class="hero-visual">
+              <div class="video-container">
+                <video class="brand-video" playsinline muted autoplay loop>
+                  <source src="assets/LogoVideo.mp4" type="video/mp4">
+                </video>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- 2. SERVICES VIEW                           -->
+        <!-- ========================================== -->
+        <section id="view-services" class="view-section">
+          <div class="section-header-wrap">
+            <h2 class="section-title">My Services</h2>
+            <p class="section-subtitle">Crafting high-end user experiences & interface designs</p>
+          </div>
+
+          <div class="services-grid">
+            <div class="service-card">
+              <div class="service-index">01</div>
+              <div class="service-body">
+                <h3>UI Design</h3>
+                <p>Modern, immersive, pixel-perfect user interface layouts tailored uniquely to your game or brand identity.</p>
+              </div>
+            </div>
+
+            <div class="service-card">
+              <div class="service-index">02</div>
+              <div class="service-body">
+                <h3>UX Design</h3>
+                <p>Intuitive user experience flows, clean interactions, seamless ergonomics, and polished visual hierarchy.</p>
+              </div>
+            </div>
+
+            <div class="service-card">
+              <div class="service-index">03</div>
+              <div class="service-body">
+                <h3>UI Scripting</h3>
+                <p>Smooth, optimized, and performant frontend code logic bringing components, transitions, and interactions to life.</p>
+              </div>
+            </div>
+
+            <div class="service-card">
+              <div class="service-index">04</div>
+              <div class="service-body">
+                <h3>UI Scaling + Importing</h3>
+                <p>Flawless multi-resolution scaling, responsive adaptation across mobile/PC/console, and native game engine importing.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- 3. ToS (TERMS OF SERVICE) VIEW             -->
+        <!-- ========================================== -->
+        <section id="view-tos" class="view-section">
+          <div class="section-header-wrap">
+            <h2 class="section-title">Terms of Service</h2>
+            <p class="section-subtitle">Commission Guidelines & Working Agreement</p>
+          </div>
+
+          <div class="tos-container">
+            <div class="tos-notice-box">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+              <span>Once you commission me, you agree to these conditions:</span>
+            </div>
+
+            <div class="tos-list">
+              <div class="tos-item">
+                <span class="tos-num">1.</span>
+                <p class="tos-text">Icons may come from a free icon pack or found online or created with AI, but some icons may have a personal touch to them made by me.</p>
+              </div>
+              <div class="tos-item">
+                <span class="tos-num">2.</span>
+                <p class="tos-text">You will pay at least <strong>30% upfront</strong> and <strong>70%</strong> after work has been showcased and you are happy with the results.</p>
+              </div>
+              <div class="tos-item">
+                <span class="tos-num">3.</span>
+                <p class="tos-text">You will receive files after <strong>100%</strong> of the agreed payment has been paid.</p>
+              </div>
+              <div class="tos-item">
+                <span class="tos-num">4.</span>
+                <p class="tos-text">Revisions count as changes you desire when <strong>YOU</strong> made a mistake in the request of UI and will be charged extra.</p>
+              </div>
+              <div class="tos-item">
+                <span class="tos-num">5.</span>
+                <p class="tos-text">Asking for extra UI that has not been discussed beforehand will cost extra.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- 4. PORTFOLIO VIEW                          -->
+        <!-- ========================================== -->
+        <section id="view-portfolio" class="view-section">
+          <div class="section-header-wrap">
+            <h2 class="section-title">Portfolio</h2>
+            <p class="section-subtitle">Showcasing creative UI work & videos</p>
+          </div>
+
+          <!-- Mini Tabs: Videos, Photos & X Posts -->
+          <div class="portfolio-tab-controls">
+            <button class="tab-btn active" id="tabVideosBtn" data-tab="videos">
+              <i class="fa-solid fa-film"></i> Videos
+            </button>
+            <button class="tab-btn" id="tabPhotosBtn" data-tab="photos">
+              <i class="fa-solid fa-image"></i> Photos
+            </button>
+          </div>
+
+          <!-- Videos Grid (2 per row) - Plays local videos + X videos -->
+          <div id="videosGrid" class="portfolio-grid">
+            <!-- Dynamically populated from Portfolio/Videos and XPosts.js -->
+          </div>
+
+          <!-- Photos Grid (2 per row) -->
+          <div id="photosGrid" class="portfolio-grid" style="display: none;">
+            <!-- Dynamically populated or loaded from Portfolio/Photos -->
+          </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- 5. CONTACT VIEW                            -->
+        <!-- ========================================== -->
+        <section id="view-contact" class="view-section">
+          <div class="section-header-wrap">
+            <h2 class="section-title">Contact Me</h2>
+            <p class="section-subtitle">Get in touch for commissions and inquiries</p>
+          </div>
+
+          <div class="contact-container">
+            <div class="contact-cards-grid">
+              
+              <!-- Discord -->
+              <a id="contactDiscordCard" href="https://discord.com/users/1057018141433139281" target="_blank" rel="noopener noreferrer" class="contact-card discord-card">
+                <div class="contact-icon-box">
+                  <i class="fa-brands fa-discord"></i>
+                </div>
+                <h3 class="contact-title">Discord</h3>
+                <span class="contact-handle">@LuxeVisuals</span>
+                <span class="contact-action">Send Message <i class="fa-solid fa-arrow-up-right-from-square"></i></span>
+              </a>
+
+              <!-- X / Twitter -->
+              <a id="contactXCard" href="https://x.com/LuxeVisualsDev" target="_blank" rel="noopener noreferrer" class="contact-card x-card">
+                <div class="contact-icon-box">
+                  <i class="fa-brands fa-x-twitter"></i>
+                </div>
+                <h3 class="contact-title">X (Twitter)</h3>
+                <span class="contact-handle">@LuxeVisualsDev</span>
+                <span class="contact-action">Visit Profile <i class="fa-solid fa-arrow-up-right-from-square"></i></span>
+              </a>
+
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Fullscreen Media Lightbox for Portfolio Inspection -->
+  <div id="mediaLightbox" class="lightbox-modal">
+    <div class="lightbox-content">
+      <button id="lightboxClose" class="lightbox-close" aria-label="Close Preview">&times;</button>
+      <div id="lightboxMediaSlot"></div>
+    </div>
+  </div>
+
+  <!-- Official Twitter/X Widget Embed Script -->
+  <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+  <!-- Configuration, X Posts list, and Application Logic Scripts -->
+  <script src="config.js"></script>
+  <script src="XPosts.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
