@@ -12,9 +12,7 @@
  */
 
 const X_POSTS = [
-  // Paste your X post links here between quotes:
-  // "https://x.com/LuxeVisualsDev/status/...",
-  // "https://x.com/LuxeVisualsDev/status/...",
+  https://x.com/LuxeVisualsDev/status/2115524777662177450
 ];
 
 // Expose globally
