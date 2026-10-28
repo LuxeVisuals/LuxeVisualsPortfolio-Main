@@ -12,7 +12,6 @@
  */
 
 const X_POSTS = [
-  https://x.com/LuxeVisualsDev/status/2115524777662177450
 ];
 
 // Expose globally
