@@ -841,6 +841,31 @@ html, body {
   margin: 0 auto !important;
 }
 
+/* Card-level loading overlay (visible while media is still loading) */
+.portfolio-media-item.loading {
+  pointer-events: none;
+}
+
+.card-loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: linear-gradient(110deg, #0e0c15 8%, #1c172a 18%, #0e0c15 33%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite linear;
+  border-radius: 16px;
+}
+
+.portfolio-media-item.loading video,
+.portfolio-media-item.loading img {
+  opacity: 0;
+}
+
 .portfolio-media-item img,
 .portfolio-media-item video {
   width: 100%;

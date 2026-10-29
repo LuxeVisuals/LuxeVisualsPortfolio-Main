@@ -175,162 +175,189 @@ function setupPortfolio() {
 }
 
 /**
- * DIRECT RENDER approach:
- * Instead of probing whether files exist (which fails on file://),
- * we create all cards immediately for 01..max and hide the ones
- * whose media fails to load. This works on both file:// and https://.
+ * DIRECT RENDER approach — NO TIMEOUT:
+ * Creates all cards 01..max with a loading spinner overlay.
+ * Each card waits INDEFINITELY until the media loads or errors.
+ * On load → spinner removed, media shown.
+ * On error → card removed from DOM entirely.
+ * Status bar tracks how many are still loading vs loaded.
  */
 function directRenderFolder(folderName, container, isVideo) {
   const cfg = window.LUXE_CONFIG?.portfolio || {};
   const max = cfg.maxItemsToCheck || 100;
-
-  // For videos we only check .mp4 (most common), for photos we check .png then .jpg
-  const primaryExt = isVideo ? 'mp4' : 'png';
-  const fallbackExt = isVideo ? null : 'jpg';
+  const extensions = isVideo
+    ? (cfg.videoExtensions || ['mp4'])
+    : (cfg.photoExtensions || ['png', 'jpg']);
 
   container.innerHTML = '';
-  let foundCount = 0;
 
   const statusBar = document.getElementById('portfolioLoadingStatus');
   const statusText = document.getElementById('portfolioStatusText');
-
   if (statusBar) statusBar.classList.remove('hidden');
-  if (statusText) statusText.textContent = `Loading ${isVideo ? 'videos' : 'photos'}...`;
 
-  // Create all cards immediately, hide ones that fail
+  // Tracking state
+  const state = { loaded: 0, failed: 0, pending: max, total: max };
+
+  function updateStatus() {
+    const stillLoading = state.total - state.loaded - state.failed;
+    if (statusText) {
+      if (stillLoading > 0) {
+        statusText.textContent = `Loaded ${state.loaded} ${isVideo ? 'videos' : 'photos'} — ${stillLoading} still loading...`;
+      } else {
+        statusText.textContent = state.loaded > 0
+          ? `All ${isVideo ? 'videos' : 'photos'} loaded! (${state.loaded} found)`
+          : `No ${isVideo ? 'videos' : 'photos'} found`;
+        // Hide status bar after a short moment
+        setTimeout(() => {
+          if (statusBar) statusBar.classList.add('hidden');
+        }, 1200);
+        // Show empty state if nothing loaded
+        if (state.loaded === 0) {
+          showEmptyState(folderName, container, isVideo);
+        }
+      }
+    }
+  }
+
+  updateStatus();
+
   for (let i = 1; i <= max; i++) {
     const padded = String(i).padStart(2, '0');
-    const filePath = `Portfolio/${folderName}/${padded}.${primaryExt}`;
 
-    const card = createDirectCard(filePath, `${padded}.${primaryExt}`, isVideo, i,
+    const card = createDirectCard(padded, folderName, extensions, isVideo, i,
       // onLoaded
       () => {
-        foundCount++;
-        if (statusText) statusText.textContent = `Loaded ${foundCount} ${isVideo ? 'videos' : 'photos'}...`;
+        state.loaded++;
+        updateStatus();
       },
-      // onFailed - try fallback extension, or hide
+      // onAllFailed — every extension failed, remove the card
       () => {
-        if (fallbackExt) {
-          const fbPath = `Portfolio/${folderName}/${padded}.${fallbackExt}`;
-          retryCardWithFallback(card, fbPath, `${padded}.${fallbackExt}`, isVideo,
-            () => {
-              foundCount++;
-              if (statusText) statusText.textContent = `Loaded ${foundCount} ${isVideo ? 'videos' : 'photos'}...`;
-            },
-            () => {
-              card.style.display = 'none';
-            }
-          );
-        } else {
-          card.style.display = 'none';
-        }
+        state.failed++;
+        card.remove();
+        updateStatus();
       }
     );
 
     container.appendChild(card);
   }
-
-  // After a generous wait, clean up hidden cards and update status
-  setTimeout(() => {
-    // Remove all hidden (non-existent) cards from DOM
-    container.querySelectorAll('.portfolio-media-item[style*="display: none"]').forEach(el => el.remove());
-
-    if (foundCount === 0) {
-      showEmptyState(folderName, container, isVideo);
-    }
-
-    if (statusText) statusText.textContent = `All ${isVideo ? 'videos' : 'photos'} loaded! (${foundCount} found)`;
-    setTimeout(() => {
-      if (statusBar) statusBar.classList.add('hidden');
-    }, 800);
-  }, 3000);
 }
 
 /**
- * Create a card with embedded media that self-hides on error.
+ * Create a card with a loading spinner that tries each file extension.
+ * Shows spinner until media loads. NO TIMEOUT — waits indefinitely.
  */
-function createDirectCard(url, fileName, isVideo, index, onLoaded, onFailed) {
+function createDirectCard(paddedName, folderName, extensions, isVideo, index, onLoaded, onAllFailed) {
   const item = document.createElement('div');
-  item.className = 'portfolio-media-item';
-  item.setAttribute('data-url', url);
+  item.className = 'portfolio-media-item loading';
   item.setAttribute('data-index', index);
+
+  // Loading spinner overlay (visible until media loads)
+  const spinner = document.createElement('div');
+  spinner.className = 'card-loading-overlay';
+  spinner.innerHTML = `
+    <div class="skeleton-spinner"></div>
+    <span class="skeleton-label">Loading ${isVideo ? 'video' : 'photo'} ${paddedName}...</span>
+  `;
+  item.appendChild(spinner);
 
   const tag = document.createElement('span');
   tag.className = 'media-tag';
-  tag.textContent = fileName;
+  tag.textContent = `${paddedName}`;
 
   const overlay = document.createElement('div');
   overlay.className = 'media-hover-overlay';
   overlay.innerHTML = '<i class="fa-solid fa-expand"></i>';
 
-  if (isVideo) {
-    const vid = document.createElement('video');
-    vid.src = url;
-    vid.preload = 'auto';
-    vid.muted = true;
-    vid.loop = true;
-    vid.playsInline = true;
+  // Try each extension in order: e.g. ['mp4'] for video, ['png','jpg','jpeg','webp','gif'] for photos
+  let extIndex = 0;
 
-    vid.addEventListener('loadeddata', () => { if (onLoaded) onLoaded(); }, { once: true });
-    vid.addEventListener('error', () => { if (onFailed) onFailed(); }, { once: true });
+  function tryNextExtension() {
+    if (extIndex >= extensions.length) {
+      // All extensions exhausted — this file doesn't exist
+      if (onAllFailed) onAllFailed();
+      return;
+    }
 
-    item.addEventListener('mouseenter', () => vid.play().catch(() => {}));
-    item.addEventListener('mouseleave', () => { vid.pause(); vid.currentTime = 0; });
-    item.appendChild(vid);
-  } else {
-    const img = document.createElement('img');
-    img.src = url;
-    img.alt = fileName;
+    const ext = extensions[extIndex];
+    const filePath = `Portfolio/${folderName}/${paddedName}.${ext}`;
+    extIndex++;
 
-    img.addEventListener('load', () => { if (onLoaded) onLoaded(); }, { once: true });
-    img.addEventListener('error', () => { if (onFailed) onFailed(); }, { once: true });
+    item.setAttribute('data-url', filePath);
+    tag.textContent = `${paddedName}.${ext}`;
 
-    item.appendChild(img);
+    if (isVideo) {
+      // Remove any previous video element
+      const oldVid = item.querySelector('video');
+      if (oldVid) oldVid.remove();
+
+      const vid = document.createElement('video');
+      vid.src = filePath;
+      vid.preload = 'auto';
+      vid.muted = true;
+      vid.loop = true;
+      vid.playsInline = true;
+
+      vid.addEventListener('loadeddata', () => {
+        // SUCCESS: remove spinner, show media
+        item.classList.remove('loading');
+        spinner.remove();
+        if (onLoaded) onLoaded();
+      }, { once: true });
+
+      vid.addEventListener('error', () => {
+        vid.remove();
+        tryNextExtension();
+      }, { once: true });
+
+      item.addEventListener('mouseenter', () => {
+        const v = item.querySelector('video');
+        if (v) v.play().catch(() => {});
+      });
+      item.addEventListener('mouseleave', () => {
+        const v = item.querySelector('video');
+        if (v) { v.pause(); v.currentTime = 0; }
+      });
+
+      item.insertBefore(vid, spinner);
+    } else {
+      // Remove any previous image element
+      const oldImg = item.querySelector('img');
+      if (oldImg) oldImg.remove();
+
+      const img = document.createElement('img');
+      img.src = filePath;
+      img.alt = `${paddedName}.${ext}`;
+
+      img.addEventListener('load', () => {
+        // SUCCESS: remove spinner, show media
+        item.classList.remove('loading');
+        spinner.remove();
+        if (onLoaded) onLoaded();
+      }, { once: true });
+
+      img.addEventListener('error', () => {
+        img.remove();
+        tryNextExtension();
+      }, { once: true });
+
+      item.insertBefore(img, spinner);
+    }
   }
+
+  // Start trying extensions
+  tryNextExtension();
 
   item.appendChild(tag);
   item.appendChild(overlay);
 
   item.addEventListener('click', () => {
-    openLightbox(url, isVideo);
+    const url = item.getAttribute('data-url');
+    if (url && !item.classList.contains('loading')) {
+      openLightbox(url, isVideo);
+    }
   });
 
   return item;
-}
-
-/**
- * Retry a card with a fallback file extension (e.g. .jpg if .png failed)
- */
-function retryCardWithFallback(card, newUrl, newFileName, isVideo, onLoaded, onFailed) {
-  card.setAttribute('data-url', newUrl);
-
-  // Update the tag label
-  const tag = card.querySelector('.media-tag');
-  if (tag) tag.textContent = newFileName;
-
-  if (isVideo) {
-    const vid = card.querySelector('video');
-    if (vid) {
-      vid.src = newUrl;
-      vid.addEventListener('loadeddata', () => { if (onLoaded) onLoaded(); }, { once: true });
-      vid.addEventListener('error', () => { if (onFailed) onFailed(); }, { once: true });
-    } else {
-      if (onFailed) onFailed();
-    }
-  } else {
-    const img = card.querySelector('img');
-    if (img) {
-      img.src = newUrl;
-      img.alt = newFileName;
-      img.addEventListener('load', () => { if (onLoaded) onLoaded(); }, { once: true });
-      img.addEventListener('error', () => { if (onFailed) onFailed(); }, { once: true });
-    } else {
-      if (onFailed) onFailed();
-    }
-  }
-
-  // Update lightbox click
-  card.onclick = () => openLightbox(newUrl, isVideo);
 }
 
 /**
