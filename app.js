@@ -197,6 +197,54 @@ function setupPortfolio() {
   // Automatically probe and load images and videos in Portfolio/Photos and Portfolio/Videos
   scanPortfolioFolder('Photos', photosGrid, false);
   scanPortfolioFolder('Videos', videosGrid, true);
+  loadXPosts(videosGrid);
+}
+
+/**
+ * Loads X (Twitter) Video / Media Posts from XPosts.js
+ */
+function loadXPosts(container) {
+  const posts = window.X_POSTS || [];
+  if (!Array.isArray(posts) || posts.length === 0) return;
+
+  posts.forEach((url, idx) => {
+    if (!url || typeof url !== 'string' || !url.trim()) return;
+    const cleanUrl = url.trim();
+
+    const item = document.createElement('div');
+    item.className = 'portfolio-media-item x-embed-item';
+    item.setAttribute('data-x-url', cleanUrl);
+
+    // Create blockquote for Twitter/X official widget
+    const blockquote = document.createElement('blockquote');
+    blockquote.className = 'twitter-tweet';
+    blockquote.setAttribute('data-theme', 'dark');
+    blockquote.setAttribute('data-dnt', 'true');
+    blockquote.setAttribute('data-align', 'center');
+
+    const anchor = document.createElement('a');
+    anchor.href = cleanUrl;
+    anchor.textContent = `Loading X Post #${idx + 1}...`;
+    blockquote.appendChild(anchor);
+
+    item.appendChild(blockquote);
+    container.appendChild(item);
+    removeEmptyState(container);
+  });
+
+  // Ask Twitter widget engine to render new embeds
+  if (window.twttr && window.twttr.widgets) {
+    window.twttr.widgets.load(container);
+  } else {
+    // Retry if script still loading
+    const timer = setInterval(() => {
+      if (window.twttr && window.twttr.widgets) {
+        window.twttr.widgets.load(container);
+        clearInterval(timer);
+      }
+    }, 400);
+    setTimeout(() => clearInterval(timer), 6000);
+  }
 }
 
 /**
