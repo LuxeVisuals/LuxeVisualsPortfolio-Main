@@ -248,11 +248,11 @@ function loadXPosts(container) {
 }
 
 /**
- * Scan numbered files or load registered known items instantly
+ * Scan numbered files automatically (01, 02, 03... 100+)
  */
 function scanPortfolioFolder(folderName, container, isVideo) {
   const cfg = window.LUXE_CONFIG?.portfolio || {};
-  const max = cfg.maxItemsToCheck || 50;
+  const max = cfg.maxItemsToCheck || 100;
   const extensions = isVideo 
     ? (cfg.videoExtensions || ['mp4', 'webm', 'mov'])
     : (cfg.photoExtensions || ['png', 'jpg', 'jpeg', 'webp', 'gif']);
@@ -268,7 +268,7 @@ function scanPortfolioFolder(folderName, container, isVideo) {
     if (!statusBar || !statusText) return;
     if (activeLoads > 0) {
       statusBar.classList.remove('hidden');
-      statusText.textContent = `Loading ${activeLoads} ${isVideo ? 'video' : 'photo'} items...`;
+      statusText.textContent = `Scanning for media... (${foundCount} found so far)`;
     } else {
       statusText.textContent = `All media loaded! (${foundCount} found)`;
       setTimeout(() => {
@@ -279,22 +279,7 @@ function scanPortfolioFolder(folderName, container, isVideo) {
     }
   }
 
-  // 1. If known items are listed in config.js, load them directly without delay
-  const knownItems = isVideo ? cfg.knownVideos : cfg.knownPhotos;
-  if (Array.isArray(knownItems) && knownItems.length > 0) {
-    knownItems.forEach(fileName => {
-      const filePath = `Portfolio/${folderName}/${fileName}`;
-      foundCount++;
-      const card = createMediaCard(filePath, fileName, isVideo);
-      container.appendChild(card);
-    });
-    removeEmptyState(container);
-    updateStatus();
-    return;
-  }
-
-  // 2. Otherwise auto-scan numbered files 01..max
-  // Show temporary shimmer skeleton while scanning
+  // Temporary shimmer skeleton indicator while scanning
   const initialSkeletons = [];
   for (let s = 1; s <= 2; s++) {
     const pad = String(s).padStart(2, '0');
@@ -310,7 +295,32 @@ function scanPortfolioFolder(folderName, container, isVideo) {
 
   updateStatus();
 
+  // Sort helper to ensure items are inserted in numerical order: 01, 02, 03...
+  function insertOrderedCard(card, itemIndex) {
+    card.setAttribute('data-index', itemIndex);
+    const existingCards = Array.from(container.querySelectorAll('.portfolio-media-item:not(.x-embed-item)'));
+    let inserted = false;
+    for (const existing of existingCards) {
+      const idx = parseInt(existing.getAttribute('data-index') || '9999', 10);
+      if (itemIndex < idx) {
+        container.insertBefore(card, existing);
+        inserted = true;
+        break;
+      }
+    }
+    if (!inserted) {
+      // Insert before x-embed items or append
+      const firstX = container.querySelector('.x-embed-item');
+      if (firstX) {
+        container.insertBefore(card, firstX);
+      } else {
+        container.appendChild(card);
+      }
+    }
+  }
+
   for (let i = 1; i <= max; i++) {
+    const itemIndex = i;
     const padded = String(i).padStart(2, '0');
     const unpadded = String(i);
     const candidateBases = [padded, unpadded];
@@ -326,15 +336,16 @@ function scanPortfolioFolder(folderName, container, isVideo) {
           container,
           isVideo,
           `${name}.${ext}`,
+          itemIndex,
           // On Success
-          () => {
+          (card) => {
             foundCount++;
             activeLoads = Math.max(0, activeLoads - 1);
-            // Remove skeleton
             if (initialSkeletons.length > 0) {
               const s = initialSkeletons.shift();
               if (s && s.parentNode) s.remove();
             }
+            insertOrderedCard(card, itemIndex);
             removeEmptyState(container);
             updateStatus();
           },
@@ -358,13 +369,13 @@ function scanPortfolioFolder(folderName, container, isVideo) {
       showEmptyState(folderName, container, isVideo);
     }
     updateStatus();
-  }, 2000);
+  }, 2500);
 }
 
 /**
- * Robust media loader - never fails on local file:// or slow networks
+ * Robust media loader - checks presence and adds smoothly
  */
-function testAndAddMedia(url, container, isVideo, fileName, onSuccess, onFail) {
+function testAndAddMedia(url, container, isVideo, fileName, itemIndex, onSuccess, onFail) {
   if (isVideo) {
     const video = document.createElement('video');
     video.preload = 'metadata';
@@ -382,9 +393,8 @@ function testAndAddMedia(url, container, isVideo, fileName, onSuccess, onFail) {
         if (onFail) onFail();
         return;
       }
-      if (onSuccess) onSuccess();
       const card = createMediaCard(url, fileName, true, video);
-      container.appendChild(card);
+      if (onSuccess) onSuccess(card);
     };
 
     video.onloadedmetadata = handleSuccess;
@@ -397,7 +407,6 @@ function testAndAddMedia(url, container, isVideo, fileName, onSuccess, onFail) {
       if (onFail) onFail();
     };
 
-    // Generous fallback window for local large files
     setTimeout(() => {
       if (!hasHandled) {
         hasHandled = true;
@@ -417,9 +426,8 @@ function testAndAddMedia(url, container, isVideo, fileName, onSuccess, onFail) {
         if (onFail) onFail();
         return;
       }
-      if (onSuccess) onSuccess();
       const card = createMediaCard(url, fileName, false);
-      container.appendChild(card);
+      if (onSuccess) onSuccess(card);
     };
 
     img.onerror = () => {

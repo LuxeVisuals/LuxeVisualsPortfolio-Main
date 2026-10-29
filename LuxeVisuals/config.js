@@ -22,16 +22,12 @@ const LUXE_CONFIG = {
   },
 
   // Portfolio items configuration
-  // Auto-scan checks Portfolio/Photos and Portfolio/Videos up to maxItemsToCheck
-  // If you want instant zero-delay loading without waiting for file scans,
-  // list your known files here! If left empty or undefined, it auto-scans the folders.
+  // Any files you add to Portfolio/Photos and Portfolio/Videos (01, 02, 03... 100+)
+  // are automatically scanned and rendered on the website!
   portfolio: {
-    maxItemsToCheck: 50,
+    maxItemsToCheck: 100,
     photoExtensions: ['png', 'jpg', 'jpeg', 'webp', 'gif'],
-    videoExtensions: ['mp4', 'webm', 'mov'],
-    // Registered items load instantly and guaranteed:
-    knownVideos: ['01.mp4', '02.mp4', '03.mp4', '04.mp4'],
-    knownPhotos: ['01.png', '02.png', '03.png', '04.png']
+    videoExtensions: ['mp4', 'webm', 'mov']
   }
 };
 
