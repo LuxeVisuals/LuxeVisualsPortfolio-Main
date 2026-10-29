@@ -248,11 +248,11 @@ function loadXPosts(container) {
 }
 
 /**
- * Scan numbered files: 01, 02, 03... up to 100 with active loading indicators & skeleton placeholders
+ * Scan numbered files or load registered known items instantly
  */
 function scanPortfolioFolder(folderName, container, isVideo) {
   const cfg = window.LUXE_CONFIG?.portfolio || {};
-  const max = cfg.maxItemsToCheck || 100;
+  const max = cfg.maxItemsToCheck || 50;
   const extensions = isVideo 
     ? (cfg.videoExtensions || ['mp4', 'webm', 'mov'])
     : (cfg.photoExtensions || ['png', 'jpg', 'jpeg', 'webp', 'gif']);
@@ -275,28 +275,41 @@ function scanPortfolioFolder(folderName, container, isVideo) {
         if (activeLoads === 0) {
           statusBar.classList.add('hidden');
         }
-      }, 1200);
+      }, 1000);
     }
   }
 
-  // Pre-create placeholder skeleton frames for early indices
-  const initialSkeletons = {};
-  for (let s = 1; s <= 4; s++) {
+  // 1. If known items are listed in config.js, load them directly without delay
+  const knownItems = isVideo ? cfg.knownVideos : cfg.knownPhotos;
+  if (Array.isArray(knownItems) && knownItems.length > 0) {
+    knownItems.forEach(fileName => {
+      const filePath = `Portfolio/${folderName}/${fileName}`;
+      foundCount++;
+      const card = createMediaCard(filePath, fileName, isVideo);
+      container.appendChild(card);
+    });
+    removeEmptyState(container);
+    updateStatus();
+    return;
+  }
+
+  // 2. Otherwise auto-scan numbered files 01..max
+  // Show temporary shimmer skeleton while scanning
+  const initialSkeletons = [];
+  for (let s = 1; s <= 2; s++) {
     const pad = String(s).padStart(2, '0');
     const skel = document.createElement('div');
     skel.className = 'skeleton-placeholder';
-    skel.id = `skel-${folderName}-${pad}`;
     skel.innerHTML = `
       <div class="skeleton-spinner"></div>
-      <span class="skeleton-label">Loading ${isVideo ? 'Video' : 'Photo'} ${pad}...</span>
+      <span class="skeleton-label">Checking ${isVideo ? 'Video' : 'Photo'} ${pad}...</span>
     `;
     container.appendChild(skel);
-    initialSkeletons[pad] = skel;
+    initialSkeletons.push(skel);
   }
 
   updateStatus();
 
-  // Test sequentially and in parallel batches for optimal speed
   for (let i = 1; i <= max; i++) {
     const padded = String(i).padStart(2, '0');
     const unpadded = String(i);
@@ -317,14 +330,15 @@ function scanPortfolioFolder(folderName, container, isVideo) {
           () => {
             foundCount++;
             activeLoads = Math.max(0, activeLoads - 1);
-            if (initialSkeletons[padded] && initialSkeletons[padded].parentNode) {
-              initialSkeletons[padded].remove();
-              delete initialSkeletons[padded];
+            // Remove skeleton
+            if (initialSkeletons.length > 0) {
+              const s = initialSkeletons.shift();
+              if (s && s.parentNode) s.remove();
             }
             removeEmptyState(container);
             updateStatus();
           },
-          // On Fail / Finished probing
+          // On Fail
           () => {
             activeLoads = Math.max(0, activeLoads - 1);
             updateStatus();
@@ -334,47 +348,48 @@ function scanPortfolioFolder(folderName, container, isVideo) {
     });
   }
 
-  // Clean up any remaining initial skeletons if not enough items exist
+  // Clean up remaining skeletons if none found
   setTimeout(() => {
-    Object.keys(initialSkeletons).forEach(pad => {
-      if (initialSkeletons[pad] && initialSkeletons[pad].parentNode) {
-        initialSkeletons[pad].remove();
-      }
+    initialSkeletons.forEach(s => {
+      if (s && s.parentNode) s.remove();
     });
 
     if (foundCount === 0) {
       showEmptyState(folderName, container, isVideo);
     }
     updateStatus();
-  }, 1200);
+  }, 2000);
 }
 
 /**
- * Highly optimized media loader with fast metadata detection
+ * Robust media loader - never fails on local file:// or slow networks
  */
 function testAndAddMedia(url, container, isVideo, fileName, onSuccess, onFail) {
   if (isVideo) {
     const video = document.createElement('video');
-    video.preload = 'metadata'; // Fast metadata load without buffering entire multi-MB video
+    video.preload = 'metadata';
     video.muted = true;
     video.playsInline = true;
     video.src = url;
 
     let hasHandled = false;
 
-    video.onloadedmetadata = () => {
+    const handleSuccess = () => {
       if (hasHandled) return;
       hasHandled = true;
 
-      // Avoid duplicates
       if (container.querySelector(`[data-url="${url}"]`)) {
         if (onFail) onFail();
         return;
       }
-      onSuccess();
+      if (onSuccess) onSuccess();
       const card = createMediaCard(url, fileName, true, video);
       container.appendChild(card);
     };
+
+    video.onloadedmetadata = handleSuccess;
+    video.onloadeddata = handleSuccess;
+    video.canplay = handleSuccess;
 
     video.onerror = () => {
       if (hasHandled) return;
@@ -382,13 +397,13 @@ function testAndAddMedia(url, container, isVideo, fileName, onSuccess, onFail) {
       if (onFail) onFail();
     };
 
-    // Timeout safety for non-existent files
+    // Generous fallback window for local large files
     setTimeout(() => {
       if (!hasHandled) {
         hasHandled = true;
         if (onFail) onFail();
       }
-    }, 1200);
+    }, 4000);
 
   } else {
     const img = new Image();
@@ -402,7 +417,7 @@ function testAndAddMedia(url, container, isVideo, fileName, onSuccess, onFail) {
         if (onFail) onFail();
         return;
       }
-      onSuccess();
+      if (onSuccess) onSuccess();
       const card = createMediaCard(url, fileName, false);
       container.appendChild(card);
     };
@@ -420,7 +435,7 @@ function testAndAddMedia(url, container, isVideo, fileName, onSuccess, onFail) {
         hasHandled = true;
         if (onFail) onFail();
       }
-    }, 1200);
+    }, 3000);
   }
 }
 
