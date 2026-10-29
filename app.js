@@ -248,7 +248,7 @@ function loadXPosts(container) {
 }
 
 /**
- * Scan numbered files: 01, 02, 03... up to 100
+ * Scan numbered files: 01, 02, 03... up to 100 with active loading indicators & skeleton placeholders
  */
 function scanPortfolioFolder(folderName, container, isVideo) {
   const cfg = window.LUXE_CONFIG?.portfolio || {};
@@ -257,60 +257,174 @@ function scanPortfolioFolder(folderName, container, isVideo) {
     ? (cfg.videoExtensions || ['mp4', 'webm', 'mov'])
     : (cfg.photoExtensions || ['png', 'jpg', 'jpeg', 'webp', 'gif']);
 
-  let foundCount = 0;
   container.innerHTML = '';
+  let foundCount = 0;
+  let activeLoads = 0;
 
-  // Helper to test each candidate
+  const statusBar = document.getElementById('portfolioLoadingStatus');
+  const statusText = document.getElementById('portfolioStatusText');
+
+  function updateStatus() {
+    if (!statusBar || !statusText) return;
+    if (activeLoads > 0) {
+      statusBar.classList.remove('hidden');
+      statusText.textContent = `Loading ${activeLoads} ${isVideo ? 'video' : 'photo'} items...`;
+    } else {
+      statusText.textContent = `All media loaded! (${foundCount} found)`;
+      setTimeout(() => {
+        if (activeLoads === 0) {
+          statusBar.classList.add('hidden');
+        }
+      }, 1200);
+    }
+  }
+
+  // Pre-create placeholder skeleton frames for early indices
+  const initialSkeletons = {};
+  for (let s = 1; s <= 4; s++) {
+    const pad = String(s).padStart(2, '0');
+    const skel = document.createElement('div');
+    skel.className = 'skeleton-placeholder';
+    skel.id = `skel-${folderName}-${pad}`;
+    skel.innerHTML = `
+      <div class="skeleton-spinner"></div>
+      <span class="skeleton-label">Loading ${isVideo ? 'Video' : 'Photo'} ${pad}...</span>
+    `;
+    container.appendChild(skel);
+    initialSkeletons[pad] = skel;
+  }
+
+  updateStatus();
+
+  // Test sequentially and in parallel batches for optimal speed
   for (let i = 1; i <= max; i++) {
     const padded = String(i).padStart(2, '0');
     const unpadded = String(i);
-
     const candidateBases = [padded, unpadded];
 
     candidateBases.forEach(name => {
       extensions.forEach(ext => {
         const filePath = `Portfolio/${folderName}/${name}.${ext}`;
-        testAndAddMedia(filePath, container, isVideo, `${name}.${ext}`, () => {
-          foundCount++;
-          removeEmptyState(container);
-        });
+        activeLoads++;
+        updateStatus();
+
+        testAndAddMedia(
+          filePath,
+          container,
+          isVideo,
+          `${name}.${ext}`,
+          // On Success
+          () => {
+            foundCount++;
+            activeLoads = Math.max(0, activeLoads - 1);
+            if (initialSkeletons[padded] && initialSkeletons[padded].parentNode) {
+              initialSkeletons[padded].remove();
+              delete initialSkeletons[padded];
+            }
+            removeEmptyState(container);
+            updateStatus();
+          },
+          // On Fail / Finished probing
+          () => {
+            activeLoads = Math.max(0, activeLoads - 1);
+            updateStatus();
+          }
+        );
       });
     });
   }
 
-  // If after checking none exist yet, display user-friendly helper
+  // Clean up any remaining initial skeletons if not enough items exist
   setTimeout(() => {
+    Object.keys(initialSkeletons).forEach(pad => {
+      if (initialSkeletons[pad] && initialSkeletons[pad].parentNode) {
+        initialSkeletons[pad].remove();
+      }
+    });
+
     if (foundCount === 0) {
       showEmptyState(folderName, container, isVideo);
     }
-  }, 600);
+    updateStatus();
+  }, 1200);
 }
 
-function testAndAddMedia(url, container, isVideo, fileName, onSuccess) {
+/**
+ * Highly optimized media loader with fast metadata detection
+ */
+function testAndAddMedia(url, container, isVideo, fileName, onSuccess, onFail) {
   if (isVideo) {
     const video = document.createElement('video');
-    video.preload = 'metadata';
+    video.preload = 'metadata'; // Fast metadata load without buffering entire multi-MB video
+    video.muted = true;
+    video.playsInline = true;
     video.src = url;
-    video.onloadeddata = () => {
-      // Avoid duplicate insertion if padded and unpadded match
-      if (container.querySelector(`[data-url="${url}"]`)) return;
+
+    let hasHandled = false;
+
+    video.onloadedmetadata = () => {
+      if (hasHandled) return;
+      hasHandled = true;
+
+      // Avoid duplicates
+      if (container.querySelector(`[data-url="${url}"]`)) {
+        if (onFail) onFail();
+        return;
+      }
       onSuccess();
-      const card = createMediaCard(url, fileName, true);
+      const card = createMediaCard(url, fileName, true, video);
       container.appendChild(card);
     };
+
+    video.onerror = () => {
+      if (hasHandled) return;
+      hasHandled = true;
+      if (onFail) onFail();
+    };
+
+    // Timeout safety for non-existent files
+    setTimeout(() => {
+      if (!hasHandled) {
+        hasHandled = true;
+        if (onFail) onFail();
+      }
+    }, 1200);
+
   } else {
     const img = new Image();
-    img.src = url;
+    let hasHandled = false;
+
     img.onload = () => {
-      if (container.querySelector(`[data-url="${url}"]`)) return;
+      if (hasHandled) return;
+      hasHandled = true;
+
+      if (container.querySelector(`[data-url="${url}"]`)) {
+        if (onFail) onFail();
+        return;
+      }
       onSuccess();
       const card = createMediaCard(url, fileName, false);
       container.appendChild(card);
     };
+
+    img.onerror = () => {
+      if (hasHandled) return;
+      hasHandled = true;
+      if (onFail) onFail();
+    };
+
+    img.src = url;
+
+    setTimeout(() => {
+      if (!hasHandled) {
+        hasHandled = true;
+        if (onFail) onFail();
+      }
+    }, 1200);
   }
 }
 
-function createMediaCard(url, fileName, isVideo) {
+function createMediaCard(url, fileName, isVideo, existingVideo) {
   const item = document.createElement('div');
   item.className = 'portfolio-media-item';
   item.setAttribute('data-url', url);
@@ -324,8 +438,9 @@ function createMediaCard(url, fileName, isVideo) {
   overlay.innerHTML = '<i class="fa-solid fa-expand"></i>';
 
   if (isVideo) {
-    const vid = document.createElement('video');
+    const vid = existingVideo || document.createElement('video');
     vid.src = url;
+    vid.preload = 'metadata';
     vid.muted = true;
     vid.loop = true;
     vid.playsInline = true;
@@ -341,6 +456,7 @@ function createMediaCard(url, fileName, isVideo) {
     img.src = url;
     img.alt = fileName;
     img.loading = 'lazy';
+    img.decoding = 'async';
     item.appendChild(img);
   }
 
